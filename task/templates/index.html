@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>案件分析平台</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #1e40af;
+            --primary-gradient: linear-gradient(135deg, #1e40af, #3b82f6);
+            --text-color: #1f2937;
+            --text-secondary: #6b7280;
+            --bg-color: #f9fafb;
+            --card-bg: #ffffff;
+            --border-color: #e5e7eb;
+            --hover-color: #f3f4f6;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .header {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 24px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .main-wrapper {
+            padding: 40px 0;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 32px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            background: white;
+            border-radius: 10px;
+            padding: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
+        .btn-option {
+            padding: 10px 20px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+        }
+
+        .btn-option.active {
+            background: var(--primary-color);
+            color: white;
+            box-shadow: 0 2px 8px rgba(30, 64, 175, 0.3);
+        }
+
+        .btn-option:hover:not(.active) {
+            background: var(--hover-color);
+            color: var(--text-color);
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(30, 64, 175, 0.2);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 4px 16px rgba(30, 64, 175, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .task-table {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            border: 1px solid var(--border-color);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background-color: var(--hover-color);
+        }
+
+        th {
+            padding: 16px;
+            text-align: left;
+            font-weight: 700;
+            color: var(--text-color);
+            font-size: 14px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 14px;
+        }
+
+        tbody tr:hover {
+            background-color: var(--hover-color);
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background-color: #fef3c7;
+            color: #b45309;
+        }
+
+        .status-completed {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .table-action {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            border: 1px solid var(--border-color);
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--primary-color);
+            transition: all 0.2s ease;
+        }
+
+        .btn-sm:hover {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .empty-state-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-color);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 500px;
+            padding: 32px;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: var(--hover-color);
+            color: var(--text-color);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-color);
+            font-size: 14px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            color: var(--text-color);
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 28px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .btn-cancel {
+            padding: 10px 24px;
+            border: 1px solid var(--border-color);
+            background: white;
+            color: var(--text-color);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-cancel:hover {
+            background: var(--hover-color);
+        }
+
+        .btn-submit {
+            padding: 10px 24px;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-submit:hover {
+            box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .toolbar {
+                flex-direction: column;
+            }
+
+            .btn-group {
+                width: 100%;
+            }
+
+            .btn-option {
+                flex: 1;
+            }
+
+            .modal {
+                width: 95%;
+                padding: 24px;
+            }
+
+            th, td {
+                padding: 12px 8px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+    <div class="container">
+        <div class="header-content">
+            <div class="logo">📋 案件分析平台</div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="main-wrapper">
+    <div class="container">
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="btn-group">
+                <button class="btn-option active" onclick="filterTasks('processing')">进行中</button>
+                <button class="btn-option" onclick="filterTasks('completed')">已完成</button>
+            </div>
+            <button class="btn-primary" onclick="openCreateModal()">+ 创建任务</button>
+        </div>
+
+        <!-- Task Table -->
+        <div class="task-table">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>任务名</th>
+                            <th>保存路径</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="task_table">
+                        <tr>
+                            <td colspan="6">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">📭</div>
+                                    <div class="empty-state-title">暂无任务</div>
+                                    <div>点击"创建任务"按钮开始创建新任务</div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Task Modal -->
+<div class="modal-overlay" id="createModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title">创建新任务</h2>
+            <button class="modal-close" onclick="closeCreateModal()">✕</button>
+        </div>
+
+        <div id="alertBox" class="alert"></div>
+
+        <form id="createTaskForm" onsubmit="submitCreateTask(event)">
+            <div class="form-group">
+                <label class="form-label">任务名称 <span style="color: #ef4444;">*</span></label>
+                <input 
+                    type="text" 
+                    id="modal_task_name" 
+                    class="form-input" 
+                    placeholder="请输入任务名称"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">保存路径 <span style="color: #ef4444;">*</span></label>
+                <input 
+                    type="text" 
+                    id="modal_file_path" 
+                    class="form-input" 
+                    placeholder="例如：D:\\cases\\case001"
+                    required
+                >
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="closeCreateModal()">取消</button>
+                <button type="submit" class="btn-submit">创建</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Task Modal -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title">编辑任务</h2>
+            <button class="modal-close" onclick="closeEditModal()">✕</button>
+        </div>
+
+        <div id="editAlertBox" class="alert"></div>
+
+        <form id="editTaskForm" onsubmit="submitEditTask(event)">
+            <div class="form-group">
+                <label class="form-label">任务名称 <span style="color: #ef4444;">*</span></label>
+                <input 
+                    type="text" 
+                    id="edit_task_name" 
+                    class="form-input" 
+                    placeholder="请输入任务名称"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">保存路径 <span style="color: #ef4444;">*</span></label>
+                <input 
+                    type="text" 
+                    id="edit_file_path" 
+                    class="form-input" 
+                    placeholder="例如：D:\\cases\\case001"
+                    required
+                >
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="closeEditModal()">取消</button>
+                <button type="submit" class="btn-submit">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let currentFilter = 'processing';
+
+// ================= 模态框控制 =================
+let currentEditId = null;
+
+function openCreateModal() {
+    document.getElementById('createModal').classList.add('active');
+    document.getElementById('modal_task_name').value = '';
+    document.getElementById('modal_file_path').value = '';
+    hideAlert();
+}
+
+function closeCreateModal() {
+    document.getElementById('createModal').classList.remove('active');
+    hideAlert();
+}
+
+function openEditModal() {
+    document.getElementById('editModal').classList.add('active');
+    hideEditAlert();
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').classList.remove('active');
+    hideEditAlert();
+    currentEditId = null;
+}
+
+// 点击外部关闭模态框
+document.getElementById('createModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeCreateModal();
+    }
+});
+
+document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeEditModal();
+    }
+});
+
+// ================= 提示消息 =================
+function showAlert(message, type = 'success') {
+    const alertBox = document.getElementById('alertBox');
+    alertBox.textContent = message;
+    alertBox.className = `alert show alert-${type}`;
+    
+    if (type === 'success') {
+        setTimeout(() => hideAlert(), 2000);
+    }
+}
+
+function hideAlert() {
+    const alertBox = document.getElementById('alertBox');
+    alertBox.classList.remove('show');
+}
+
+function showEditAlert(message, type = 'success') {
+    const alertBox = document.getElementById('editAlertBox');
+    alertBox.textContent = message;
+    alertBox.className = `alert show alert-${type}`;
+    
+    if (type === 'success') {
+        setTimeout(() => hideEditAlert(), 2000);
+    }
+}
+
+function hideEditAlert() {
+    const alertBox = document.getElementById('editAlertBox');
+    alertBox.classList.remove('show');
+}
+
+// ================= 获取任务列表 =================
+function loadTasks() {
+    fetch("/api/tasks/")
+        .then(res => res.json())
+        .then(res => {
+            if (res.code !== 0) {
+                showAlert(res.msg || '加载失败', 'error');
+                return;
+            }
+
+            const filteredData = res.data.filter(item => {
+                if (currentFilter === 'processing') {
+                    return item.status === 'pending';
+                } else {
+                    return item.status === 'completed';
+                }
+            });
+
+            let html = "";
+            if (filteredData.length === 0) {
+                html = `
+                    <tr>
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📭</div>
+                                <div class="empty-state-title">暂无任务</div>
+                                <div>点击"创建任务"按钮开始创建新任务</div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                filteredData.forEach(item => {
+                    const statusText = item.status === 'pending' ? '进行中' : '已完成';
+                    const statusClass = item.status === 'pending' ? 'status-pending' : 'status-completed';
+                    
+                    let actionButtons = '';
+                    if (item.status === 'pending') {
+                        // 进行中的任务：编辑 + 删除 + 上传文件
+                        actionButtons = `
+                            <button class="btn-sm" onclick="uploadFiles(${item.id})">上传文件</button>
+                            <button class="btn-sm" onclick="editTaskModal(${item.id}, '${item.task_name}', '${item.file_path}')">编辑</button>
+                            <button class="btn-sm" style="color: #ef4444; border-color: #fecaca;" onclick="deleteTask(${item.id})">删除</button>
+                        `;
+                    } else {
+                        // 已完成的任务：删除
+                        actionButtons = `
+                            <button class="btn-sm" style="color: #ef4444; border-color: #fecaca;" onclick="deleteTask(${item.id})">删除</button>
+                        `;
+                    }
+                    
+                    html += `
+                        <tr>
+                            <td>${item.id}</td>
+                            <td>${item.task_name}</td>
+                            <td>${item.file_path}</td>
+                            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                            <td>${item.created_at}</td>
+                            <td>
+                                <div class="table-action">
+                                    ${actionButtons}
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            document.getElementById("task_table").innerHTML = html;
+        })
+        .catch(() => {
+            showAlert('无法获取任务列表', 'error');
+        });
+}
+
+// ================= 过滤任务 =================
+function filterTasks(filter) {
+    currentFilter = filter;
+    
+    // 更新按钮状态
+    document.querySelectorAll('.btn-option').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    loadTasks();
+}
+
+// ================= 创建任务 =================
+function submitCreateTask(e) {
+    e.preventDefault();
+    
+    let task_name = document.getElementById("modal_task_name").value.trim();
+    let file_path = document.getElementById("modal_file_path").value.trim();
+
+    if (!task_name) {
+        showAlert("任务名称为必填项", 'error');
+        return;
+    }
+    if (!file_path) {
+        showAlert("保存路径为必填项", 'error');
+        return;
+    }
+
+    fetch("/api/tasks/create/", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            task_name: task_name,
+            file_path: file_path
+        })
+    })
+    .then(res => res.json())
+    .then(res => {
+        if (res.code === 0) {
+            showAlert("创建成功", 'success');
+            closeCreateModal();
+            loadTasks();
+        } else {
+            showAlert(res.msg || "创建失败", 'error');
+        }
+    })
+    .catch(() => {
+        showAlert("创建失败，请稍后重试", 'error');
+    });
+}
+
+// ================= 上传文件 =================
+function uploadFiles(taskId) {
+    window.location.href = `/upload/?task_id=${taskId}`;
+}
+
+// ================= 编辑任务 =================
+function editTaskModal(taskId, taskName, filePath) {
+    currentEditId = taskId;
+    document.getElementById('edit_task_name').value = taskName;
+    document.getElementById('edit_file_path').value = filePath;
+    openEditModal();
+}
+
+function submitEditTask(e) {
+    e.preventDefault();
+    
+    if (!currentEditId) {
+        showEditAlert('任务ID不存在', 'error');
+        return;
+    }
+    
+    let task_name = document.getElementById("edit_task_name").value.trim();
+    let file_path = document.getElementById("edit_file_path").value.trim();
+
+    if (!task_name) {
+        showEditAlert("任务名称为必填项", 'error');
+        return;
+    }
+    if (!file_path) {
+        showEditAlert("保存路径为必填项", 'error');
+        return;
+    }
+
+    fetch(`/api/tasks/${currentEditId}/edit/`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            task_name: task_name,
+            file_path: file_path
+        })
+    })
+    .then(res => res.json())
+    .then(res => {
+        if (res.code === 0) {
+            showEditAlert("编辑成功", 'success');
+            closeEditModal();
+            loadTasks();
+        } else {
+            showEditAlert(res.msg || "编辑失败", 'error');
+        }
+    })
+    .catch(() => {
+        showEditAlert("编辑失败，请稍后重试", 'error');
+    });
+}
+
+// ================= 删除任务 =================
+function deleteTask(taskId) {
+    if (!confirm('确定要删除此任务吗？')) {
+        return;
+    }
+
+    fetch(`/api/tasks/${taskId}/delete/`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        }
+    })
+    .then(res => res.json())
+    .then(res => {
+        if (res.code === 0) {
+            showAlert("删除成功", 'success');
+            loadTasks();
+        } else {
+            showAlert(res.msg || "删除失败", 'error');
+        }
+    })
+    .catch(() => {
+        showAlert("删除失败，请稍后重试", 'error');
+    });
+}
+
+// 初始化
+document.getElementById('createTaskForm').addEventListener('submit', submitCreateTask);
+document.getElementById('editTaskForm').addEventListener('submit', submitEditTask);
+loadTasks();
+</script>
+
+</body>
+</html>

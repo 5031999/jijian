@@ -1,0 +1,173 @@
+
+
+<!DOCTYPE html>
+
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>文件分类 + 文本提取 + 保存结果</title>
+
+<style>
+body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+.box { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
+button { padding: 10px; margin: 5px; cursor: pointer; }
+#result { margin-top: 20px; background: #eef; padding: 10px; white-space: pre-wrap; }
+</style>
+
+</head>
+
+<body>
+
+<div class="box">
+    <h2>📁 文件夹分类 + 文本提取 + 保存系统</h2>
+
+```
+<input type="file" id="folderInput" webkitdirectory multiple>
+
+<br>
+<button onclick="processSave()">③ 保存处理结果</button>
+
+<h3>分类查看</h3>
+<div>
+    <button onclick="showByMode('1')">第一类</button>
+    <button onclick="showByMode('2')">第二类</button>
+    <button onclick="showByMode('3')">第三类</button>
+    <button onclick="showByMode('4')">第四类</button>
+    <button onclick="showByMode('5')">第五类</button>
+</div>
+
+<h3>结果</h3>
+<div id="result"></div>
+```
+
+</div>
+
+<script>
+let files = [];
+let categoryData = {};
+let processData = {};
+let saveData = {};
+let taskId = new URLSearchParams(window.location.search).get('task_id');
+
+// ⭐ 当前模式
+let currentMode = "category";
+
+const input = document.getElementById("folderInput");
+const resultDiv = document.getElementById("result");
+
+// ================= 选择文件 =================
+input.addEventListener("change", function () {
+    files = Array.from(this.files);
+    alert("已选择 " + files.length + " 个文件");
+});
+
+// ================= 分类 =================
+async function uploadFiles() {
+    let formData = new FormData();
+    files.forEach(f => formData.append("files", f));
+
+    let res = await fetch("/api/classify/", {
+        method: "POST",
+        body: formData
+    });
+
+    let data = await res.json();
+    categoryData = data.categories;
+
+    currentMode = "category";
+
+    showByMode("1");
+}
+
+// ================= 顺序处理 =================
+async function processAll() {
+    let formData = new FormData();
+    files.forEach(f => formData.append("files", f));
+
+    let res = await fetch("/api/process_all/", {
+        method: "POST",
+        body: formData
+    });
+
+    let data = await res.json();
+    processData = data.data;
+
+    currentMode = "process";
+
+    showByMode("1");
+}
+
+// ================= ⭐ 新增：保存处理 =================
+async function processSave() {
+    let formData = new FormData();
+    files.forEach(f => formData.append("files", f));
+    formData.append("task_id", taskId);
+
+    let res = await fetch("/api/process_save/", {
+        method: "POST",
+        body: formData
+    });
+
+    let data = await res.json();
+    saveData = data.data;
+
+    currentMode = "save";
+
+    showSaveResult();
+}
+
+// ================= 统一入口 =================
+function showByMode(id) {
+    if (currentMode === "category") {
+        showCategory(id);
+    } else if (currentMode === "process") {
+        showProcess(id);
+    }
+}
+
+// ================= 分类展示 =================
+function showCategory(id) {
+    let list = categoryData[id] || [];
+    let text = `=== 第${id}类（分类）===\n`;
+
+    list.forEach(i => {
+        text += i.file + "\n";
+    });
+
+    resultDiv.innerText = text;
+}
+
+// ================= 处理结果展示 =================
+function showProcess(id) {
+    let list = processData[id] || [];
+
+    let text = `=== 第${id}类（处理结果）===\n\n`;
+
+    list.forEach(i => {
+        text += `文件: ${i.file}\n`;
+        text += `内容: ${i.text || i.error}\n`;
+        text += `模型结果: ${i.model_result || ""}\n`;
+        text += "-----------------\n";
+    });
+
+    resultDiv.innerText = text;
+}
+
+// ================= ⭐ 保存结果展示 =================
+function showSaveResult() {
+    let text = "=== 保存结果 ===\n\n";
+
+    saveData.forEach(i => {
+        text += `文件: ${i.file_name}\n`;
+        text += `保存路径: ${i.save_path}\n`;
+        text += `总结: ${i.summary}\n`;
+        text += "-----------------\n";
+    });
+
+    resultDiv.innerText = text;
+}
+</script>
+
+</body>
+</html>
+

@@ -1,0 +1,357 @@
+{% extends 'base.html' %}
+{% block title %}非洲新闻平台 - 首页{% endblock %}
+{% block extra_css %}
+<style>
+/* 移除容器顶部间距 */
+.container {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+</style>
+  <style>
+/* 保留原首页样式（精简）：使用容器与卡片动画 */
+.hero-section{padding-top:0;margin-top:0;min-height:auto;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.shapes{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1;overflow:hidden}
+.shape{position:absolute;filter:blur(30px);opacity:.05;border-radius:50%;background:var(--primary-gradient)}
+.shape-1{top:10%;left:10%;width:240px;height:240px;animation:float 6s ease-in-out infinite}
+.shape-2{top:60%;left:70%;width:320px;height:320px;background:var(--secondary-color);animation:float 8s ease-in-out infinite}
+.shape-3{top:40%;left:5%;width:160px;height:160px;background:var(--accent-color);animation:float 7s ease-in-out infinite}
+.shape-4{top:10%;right:10%;width:200px;height:200px;background:var(--secondary-color);animation:float 9s ease-in-out infinite}
+@keyframes float{0%{transform:translateY(0) scale(1)}50%{transform:translateY(-20px) scale(1.05)}100%{transform:translateY(0) scale(1)}}
+.hero-content{max-width:900px;margin:0 auto;text-align:center;padding:5px;position:relative;z-index:5}
+.hero-title{font-size:3rem;font-weight:800;margin-bottom:10px;line-height:1.2;background:var(--heading-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-subtitle{font-size:1.2rem;margin-bottom:15px;color:var(--text-secondary);max-width:680px;margin-left:auto;margin-right:auto}
+/* 功能卡片布局 - 统一样式 */
+.feature-cards {
+  margin: 20px 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  position: relative;
+  z-index: 5;
+}
+
+.card {
+  background-color: var(--card-bg);
+  border-radius: 14px;
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  transition: all .3s ease;
+  position: relative;
+  border: 1px solid var(--border-color);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: unset; /* 去掉强制高度，减少空白 */
+}
+
+.card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 24px rgba(0,0,0,.12);
+}
+
+.card-link {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+}
+
+.card-body {
+  padding: 14px 16px; /* 更紧凑 */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-header-row{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+
+.card-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: var(--primary-color);
+  background-color: var(--hover-color);
+  border-radius: 12px;
+  margin-bottom: 0; /* 行内布局不再需要下边距 */
+  flex-shrink: 0;
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0; /* 与图标同一行，不占垂直空间 */
+  background: var(--text-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1.3;
+}
+
+.card-text {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  flex: 0;
+  margin: 2px 0 0 0; /* 紧凑描述 */
+}
+
+.card-arrow {
+  position: absolute;
+  bottom: 18px;
+  right: 18px;
+  color: var(--primary-color);
+  font-size: 1.1rem;
+  opacity: 0;
+  transform: translateX(-10px);
+  transition: all .3s ease;
+}
+
+.card:hover .card-arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+.sidebar{position:fixed;right:32px;top:50%;transform:translateY(-50%);background-color:var(--card-bg);border-radius:12px;box-shadow:var(--card-shadow);padding:12px 0;border:1px solid var(--border-color);z-index:10}
+.sidebar-item{display:block;padding:12px 16px;text-decoration:none;color:var(--text-color);font-weight:600;font-size:.95rem;transition:all .2s ease;display:flex;align-items:center}
+.sidebar-item:hover{color:var(--primary-color);background-color:var(--hover-color)}
+.sidebar-icon{width:24px;margin-right:10px;text-align:center;color:var(--primary-color)}
+@media (max-width:1200px){.hero-title{font-size:3.2rem}.sidebar{display:none}}
+@media (max-width:992px) {
+  .hero-title {
+    font-size:2.5rem;
+  }
+  .hero-subtitle {
+    font-size:1.1rem;
+  }
+  .feature-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+    margin: 18px 0;
+  }
+  .hero-section {
+    padding-top:60px;
+    min-height:auto;
+  }
+}
+
+@media (max-width:768px) {
+  .hero-title {
+    font-size:2.2rem;
+  }
+  .hero-subtitle {
+    font-size:1.05rem;
+  }
+  .feature-cards {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+@media (max-width:576px) {
+  .hero-title {
+    font-size:1.8rem;
+  }
+  .hero-subtitle {
+    font-size:1rem;
+  }
+}
+
+/* 大厂风首页英雄区：左文右卡 */
+.hero-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:36px;align-items:center;padding:0 0 24px}
+.hero-heading{font-size:clamp(2.4rem,6vw,4.8rem);font-weight:900;line-height:1.12;margin:6px 0 6px;letter-spacing:.3px}
+.hero-heading .accent{color:var(--primary-color)}
+.hero-kicker{display:inline-flex;align-items:center;gap:8px;font-weight:700;color:var(--text-secondary);margin-bottom:8px}
+.hero-cta{display:flex;gap:12px;margin-top:14px}
+.hero-right .hero-panel{background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;box-shadow:var(--card-shadow);overflow:hidden}
+.hero-panel a.panel-row{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid rgba(0,0,0,.06);color:var(--text-color);text-decoration:none}
+.hero-panel a.panel-row:last-child{border-bottom:none}
+.hero-panel a.panel-row:hover{background:var(--hover-color);color:var(--primary-color)}
+@media (max-width:992px){.hero-grid{grid-template-columns:1fr}.hero-right{display:none}.hero-heading{font-size:clamp(3.4rem,10vw,4.8rem)}.hero-heading .accent{display:block}}
+@media (min-width:992px){.hero-heading .accent{white-space:nowrap}}
+
+/* 淡化的背景地球 */
+.hero-bg-globe{position:absolute;right:4%;top:4%;font-size:clamp(220px,28vw,560px);color:var(--primary-color);opacity:.08;pointer-events:none;z-index:0;filter:blur(.2px)}
+[data-theme="dark"] .hero-bg-globe{opacity:.12}
+
+/* 移动端卡片优化 */
+@media (max-width:576px) {
+  .feature-cards {
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .card { min-height: unset; }
+  .card-body {
+    padding: 12px 14px;
+  }
+  .card-title {
+    font-size: 1.1rem;
+  }
+  .card-text {
+    font-size: 0.85rem;
+  }
+  .card-icon { width: 28px; height: 28px; font-size: 1.1rem; }
+  .card-arrow {
+    bottom: 14px;
+    right: 14px;
+  }
+}
+
+/* 移动端优化 */
+@media (max-width: 992px) {
+  .hero-section {
+    padding-top: 0;
+    margin-top: 0;
+    min-height: auto;
+  }
+  .hero-section > .container{margin-top:0 !important;padding-top:0 !important;}
+
+  .hero-content {
+    margin-top: 0;
+    padding: 5px;
+  }
+
+  .hero-title {
+    font-size: 2rem;
+    margin-bottom: 8px;
+  }
+
+  .hero-subtitle {
+    font-size: 0.95rem;
+    margin-bottom: 10px;
+  }
+
+  .hero-action {
+    flex-direction: column;
+    gap: 8px !important;
+    margin-top: 10px !important;
+  }
+
+  .hero-action .btn {
+    width: 100%;
+    padding: 8px;
+  }
+
+  .card-arrow {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+  </style>
+{% endblock %}
+{% block content %}
+    <section class="hero-section">
+      <div class="shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+        <div class="shape shape-4"></div>
+        <i class="fas fa-globe-africa hero-bg-globe"></i>
+      </div>
+      <div class="container">
+        <div class="hero-grid">
+          <div class="hero-left">
+            <h1 class="hero-heading">从这里 <span class="accent">开始您的新闻之旅</span></h1>
+            <p class="hero-subtitle">最全面、最专业的非洲新闻资讯平台，助力您了解非洲政经动态，把握投资机遇</p>
+            <div class="hero-cta">
+              <a href="{% url 'quick_look_news' %}" class="btn btn-primary"><i class="fas fa-newspaper btn-icon"></i> 新闻速览</a>
+              <a href="{% url 'today_hot_news' %}" class="btn btn-secondary"><i class="fas fa-fire btn-icon"></i> 今日热点</a>
+              <a href="{% url 'special_library' %}" class="btn btn-outline-primary"><i class="fas fa-book btn-icon"></i> 专题库</a>
+            </div>
+          </div>
+          <div class="hero-right">
+            <div class="hero-panel">
+              <a href="{% url 'quick_look_news' %}" class="panel-row"><span>快速进入 · 新闻速览</span><i class="fas fa-arrow-right"></i></a>
+              <a href="{% url 'today_hot_news' %}" class="panel-row"><span>今日热点 · 实时更新</span><i class="fas fa-arrow-right"></i></a>
+              <a href="{% url 'special_library' %}" class="panel-row"><span>专题库 · 深度内容</span><i class="fas fa-arrow-right"></i></a>
+            </div>
+          </div>
+        </div>
+        <div class="feature-cards">
+          <div class="card">
+            <a href="{% url 'quick_look_news' %}" class="card-link"></a>
+            <div class="card-body">
+              <div class="card-header-row">
+                <div class="card-icon"><i class="fas fa-newspaper"></i></div>
+                <h3 class="card-title">新闻速览</h3>
+              </div>
+              <p class="card-text">快速浏览非洲各国最新政经动态，掌握一手资讯</p>
+              <div class="card-arrow"><i class="fas fa-arrow-right"></i></div>
+            </div>
+          </div>
+          <div class="card">
+            <a href="{% url 'today_hot_news' %}" class="card-link"></a>
+            <div class="card-body">
+              <div class="card-header-row">
+                <div class="card-icon"><i class="fas fa-fire"></i></div>
+                <h3 class="card-title">今日热点</h3>
+              </div>
+              <p class="card-text">关注非洲大陆最热门的事件和话题，实时更新</p>
+              <div class="card-arrow"><i class="fas fa-arrow-right"></i></div>
+            </div>
+          </div>
+          <div class="card">
+            <a href="{% url 'special_library' %}" class="card-link"></a>
+            <div class="card-body">
+              <div class="card-header-row">
+                <div class="card-icon"><i class="fas fa-book"></i></div>
+                <h3 class="card-title">专题库</h3>
+              </div>
+              <p class="card-text">深入探索非洲国家的特定领域和主题研究报告</p>
+              <div class="card-arrow"><i class="fas fa-arrow-right"></i></div>
+            </div>
+          </div>
+          <div class="card">
+            <a href="{% url 'personalized_news' %}" class="card-link"></a>
+            <div class="card-body">
+              <div class="card-header-row">
+                <div class="card-icon"><i class="fas fa-robot"></i></div>
+                <h3 class="card-title">个性化推荐</h3>
+              </div>
+              <p class="card-text">根据您的兴趣偏好，智能推荐相关新闻内容</p>
+              <div class="card-arrow"><i class="fas fa-arrow-right"></i></div>
+            </div>
+          </div>
+          <div class="card">
+            <a href="http://110.42.252.168:8085/chat/9c5de87c476a91e4" class="card-link" target="_blank"></a>
+            <div class="card-body">
+              <div class="card-header-row">
+                <div class="card-icon"><i class="fas fa-comments"></i></div>
+                <h3 class="card-title">智能问答</h3>
+              </div>
+              <p class="card-text">AI助手24小时在线，为您解答新闻相关问题</p>
+              <div class="card-arrow"><i class="fas fa-arrow-right"></i></div>
+            </div>
+          </div>
+          <div class="card">
+            <a href="{% url 'social_home' %}" class="card-link"></a>
+            <div class="card-body">
+              <div class="card-header-row">
+                <div class="card-icon"><i class="fas fa-hashtag"></i></div>
+                <h3 class="card-title">社交媒体</h3>
+              </div>
+              <p class="card-text">聚合社交账号动态，中文优先展示，随时掌握更新</p>
+              <div class="card-arrow"><i class="fas fa-arrow-right"></i></div>
+            </div>
+          </div>
+          <div class="card">
+            <a href="http://43.132.210.224/chat/C8nL9sz2bY4uHSZe" class="card-link" target="_blank"></a>
+            <div class="card-body">
+              <div class="card-header-row">
+                <div class="card-icon"><i class="fas fa-search"></i></div>
+                <h3 class="card-title">搜索</h3>
+              </div>
+              <p class="card-text">精准检索非洲相关新闻资讯，快速找到您关注的内容</p>
+              <div class="card-arrow"><i class="fas fa-arrow-right"></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    <aside class="sidebar">
+    <a href="{% url 'web_index' %}" class="sidebar-item"><span class="sidebar-icon">></span>回到首页</a>
+
+    </aside>
+</section>
+{% endblock %}

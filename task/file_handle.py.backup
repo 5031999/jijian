@@ -1,0 +1,240 @@
+import os
+import time
+import zipfile
+import json
+import threading
+from django.http import JsonResponse, StreamingHttpResponse
+from django.views.decorators.csrf import csrf_exempt
+from PIL import Image
+from .models import TaskFile
+
+# 全局进度存储
+progress_store = {}
+
+BASE_SAVE_DIR = r"D:\2222"
+
+
+# =========================
+# OCR（占位）
+# =========================
+class TextExtractor:
+    def extract_text(self, file_path):
+        return f"【模拟文本】来自文件: {os.path.basename(file_path)}"
+
+
+# =========================
+# ⭐ 核心接口 - SSE版本
+# =========================
+@csrf_exempt
+def process_save(request):
+    if request.method != "POST":
+        return JsonResponse({"code": 1, "msg": "只支持POST"})
+
+    zip_file = request.FILES.get("zip_file")
+    task_id = request.POST.get("task_id")
+
+    if not zip_file:
+        return JsonResponse({"code": 1, "msg": "没有上传压缩包"})
+
+    def generate_progress():
+        try:
+            # 发送开始消息
+            yield f"data: {json.dumps({'type': 'start', 'message': '开始处理压缩包...'})}\n\n"
+
+            # 1️⃣ 创建时间戳目录
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            save_root = os.path.join(BASE_SAVE_DIR, timestamp)
+            os.makedirs(save_root, exist_ok=True)
+
+            yield f"data: {json.dumps({'type': 'progress', 'message': f'创建保存目录: {save_root}'})}\n\n"
+
+            # 2️⃣ 解压zip文件到时间戳目录
+            zip_path = os.path.join(save_root, "temp.zip")
+            with open(zip_path, "wb+") as f:
+                for chunk in zip_file.chunks():
+                    f.write(chunk)
+
+            yield f"data: {json.dumps({'type': 'progress', 'message': '正在解压压缩包...'})}\n\n"
+
+            # 解压到时间戳目录
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(save_root)
+
+            # 删除临时zip文件
+            os.remove(zip_path)
+
+            yield f"data: {json.dumps({'type': 'progress', 'message': '解压完成，开始分析文件结构...'})}\n\n"
+
+            # 找到解压后的根目录
+            extracted_items = os.listdir(save_root)
+            if not extracted_items:
+                yield f"data: {json.dumps({'type': 'error', 'message': '压缩包为空'})}\n\n"
+                return
+
+            # 如果只有一个根目录，取它；否则整个save_root作为根目录
+            if len(extracted_items) == 1 and os.path.isdir(os.path.join(save_root, extracted_items[0])):
+                upload_root = os.path.join(save_root, extracted_items[0])
+            else:
+                upload_root = save_root
+
+            root_folder = os.path.basename(upload_root)
+            yield f"data: {json.dumps({'type': 'progress', 'message': f'找到根目录: {root_folder}'})}\n\n"
+
+            # 3️⃣ 处理解压后的目录
+            extractor = TextExtractor()
+            yield f"data: {json.dumps({'type': 'progress', 'message': '开始处理文件...'})}\n\n"
+
+            # 递归处理并发送进度
+            processed_files = process_folder_with_progress(upload_root, extractor)
+
+            for file_info in processed_files:
+                yield f"data: {json.dumps({'type': 'file_processed', 'file': file_info})}\n\n"
+
+            yield f"data: {json.dumps({'type': 'progress', 'message': '所有文件处理完成，开始执行最终处理...'})}\n\n"
+
+            # 4️⃣ 执行最终处理（模拟5分钟）
+            import time
+            total_steps = 20
+            for step in range(1, total_steps + 1):
+                # 模拟处理时间 (5分钟 = 300秒，总共20步，每步15秒)
+                time.sleep(15)
+
+                progress = (step / total_steps) * 100
+                message = f"正在执行最终数据处理... 进度: {progress:.1f}% ({step}/{total_steps})"
+
+                yield f"data: {json.dumps({'type': 'final_progress', 'progress': progress, 'message': message})}\n\n"
+
+            yield f"data: {json.dumps({'type': 'progress', 'message': '最终处理完成，正在更新数据库...'})}\n\n"
+
+            # 更新数据库
+            if task_id:
+                try:
+                    task_id = int(task_id)
+                    task = TaskFile.objects.get(id=task_id)
+                    task.result_json = save_root
+                    task.status = "completed"
+                    task.save()
+                    yield f"data: {json.dumps({'type': 'progress', 'message': f'数据库更新成功: 任务 {task_id} 状态更新为 completed'})}\n\n"
+                except Exception as e:
+                    yield f"data: {json.dumps({'type': 'error', 'message': f'数据库更新失败: {e}'})}\n\n"
+
+            # 发送完成消息
+            yield f"data: {json.dumps({'type': 'complete', 'data': [{'file_name': root_folder, 'save_path': upload_root, 'summary': '解压完成 + 文档提取 + 图片转PDF 已完成'}]})}\n\n"
+
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    response = StreamingHttpResponse(
+        generate_progress(),
+        content_type='text/event-stream'
+    )
+    response['Cache-Control'] = 'no-cache'
+    response['Access-Control-Allow-Origin'] = '*'
+    response['Access-Control-Allow-Headers'] = 'Cache-Control'
+    return response
+
+
+
+
+
+
+# =========================
+# 📁 递归处理目录 - 带进度
+# =========================
+def process_folder_with_progress(current_path, extractor):
+    processed_files = []
+    image_files = []
+
+    for item in os.listdir(current_path):
+        full_path = os.path.join(current_path, item)
+
+        # 子目录递归
+        if os.path.isdir(full_path):
+            sub_processed = process_folder_with_progress(full_path, extractor)
+            processed_files.extend(sub_processed)
+            continue
+
+        ext = os.path.splitext(item)[1].lower()
+
+        # 图片
+        if ext in [".jpg", ".jpeg", ".png", ".bmp"]:
+            image_files.append(full_path)
+            processed_files.append({
+                'type': 'image',
+                'path': full_path,
+                'status': '待合成PDF'
+            })
+
+        # 文档
+        elif ext in [".doc", ".docx", ".pdf"]:
+            process_document(full_path, extractor)
+            txt_path = os.path.splitext(full_path)[0] + ".txt"
+            processed_files.append({
+                'type': 'document',
+                'path': full_path,
+                'output': txt_path,
+                'status': '已提取文本'
+            })
+
+    # 当前目录图片 → PDF
+    if image_files:
+        pdf_path = create_pdf_from_images(image_files, current_path)
+        if pdf_path:
+            processed_files.append({
+                'type': 'pdf',
+                'path': pdf_path,
+                'status': '已合成PDF',
+                'images_count': len(image_files)
+            })
+
+    return processed_files
+
+
+# =========================
+# 📄 文档转 txt
+# =========================
+def process_document(file_path, extractor):
+    try:
+        text = extractor.extract_text(file_path)
+
+        txt_path = os.path.splitext(file_path)[0] + ".txt"
+
+        with open(txt_path, "w", encoding="utf-8") as f:
+            f.write(text)
+
+    except Exception as e:
+        print("文档处理失败:", file_path, e)
+
+
+# =========================
+# 🖼️ 图片转 PDF
+# =========================
+def create_pdf_from_images(image_files, save_dir):
+    try:
+        # 按创建时间排序
+        image_files.sort(key=lambda x: os.path.getctime(x))
+
+        images = []
+
+        for img_path in image_files:
+            try:
+                img = Image.open(img_path).convert("RGB")
+                images.append(img)
+            except Exception as e:
+                print("图片读取失败:", img_path, e)
+
+        if not images:
+            return
+
+        pdf_path = os.path.join(save_dir, "images.pdf")
+
+        images[0].save(
+            pdf_path,
+            "PDF",
+            save_all=True,
+            append_images=images[1:]
+        )
+
+    except Exception as e:
+        print("PDF生成失败:", e)
+      
