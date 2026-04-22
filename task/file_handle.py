@@ -205,14 +205,39 @@ def process_folder_with_progress(current_path, extractor, send_progress):
                 'status': '已提取文本'
             })
 
-    # 当前目录图片 → PDF
-    if image_files:
-        pdf_path = create_pdf_from_images(image_files, current_path)
-        if pdf_path:
+
+        # 当前目录图片 → OCR → txt
+        if image_files:
+            # ⭐ 按创建时间排序
+            image_files.sort(key=lambda x: os.path.getctime(x))
+
+            all_text = []
+
+            for img_path in image_files:
+                try:
+                    text = extractor.extract_text(img_path)
+
+                    all_text.append(f"\n===== {os.path.basename(img_path)} =====\n")
+                    all_text.append(text)
+
+                    send_progress({
+                        'type': 'progress',
+                        'message': f'OCR完成: {os.path.basename(img_path)}'
+                    })
+
+                except Exception as e:
+                    print("OCR失败:", img_path, e)
+
+            # ⭐ 写入txt
+            txt_path = os.path.join(current_path, "images_ocr.txt")
+
+            with open(txt_path, "w", encoding="utf-8") as f:
+                f.write("\n".join(all_text))
+
             processed_files.append({
-                'type': 'pdf',
-                'path': pdf_path,
-                'status': '已合成PDF',
+                'type': 'image_ocr',
+                'path': txt_path,
+                'status': '图片OCR完成',
                 'images_count': len(image_files)
             })
 
