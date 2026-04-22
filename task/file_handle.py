@@ -7,6 +7,7 @@ from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from PIL import Image
 from .models import TaskFile
+import asyncio
 
 # 全局进度存储
 progress_store = {}
@@ -142,16 +143,38 @@ def process_save(request):
 
             send_progress({'type': 'progress', 'message': '所有文件处理完成，开始执行最终处理...'})
 
-            # 更新数据库
+            # ⭐ 流式输出 stream_text 结果
+            send_progress({'type': 'progress', 'message': '开始生成任务汇报...'})
             try:
-                task_id_int = int(task_id)
-                task = TaskFile.objects.get(id=task_id_int)
-                task.result_json = save_root
-                task.status = "completed"
-                task.save()
-                send_progress({'type': 'progress', 'message': f'数据库更新成功: 任务 {task_id_int} 状态更新为 completed'})
+                # 运行异步函数
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+                async def stream_and_send():
+                    async for line in stream_text():
+                        if line.strip():  # 只发送非空行
+                            send_progress({
+                                'type': 'stream_text',
+                                'content': line
+                            })
+                
+                loop.run_until_complete(stream_and_send())
+                loop.close()
+                
+                send_progress({'type': 'progress', 'message': '任务汇报生成完成'})
             except Exception as e:
-                send_progress({'type': 'error', 'message': f'数据库更新失败: {e}'})
+                send_progress({'type': 'error', 'message': f'流式处理失败: {e}'})
+
+            # # 更新数据库
+            # try:
+            #     task_id_int = int(task_id)
+            #     task = TaskFile.objects.get(id=task_id_int)
+            #     task.result_json = save_root
+            #     task.status = "completed"
+            #     task.save()
+            #     send_progress({'type': 'progress', 'message': f'数据库更新成功: 任务 {task_id_int} 状态更新为 completed'})
+            # except Exception as e:
+            #     send_progress({'type': 'error', 'message': f'数据库更新失败: {e}'})
 
             # 发送完成消息
             send_progress({'type': 'complete', 'data': [{'file_name': root_folder, 'save_path': upload_root, 'summary': '解压完成 + 文档提取 + 图片转PDF 已完成'}]})
@@ -165,6 +188,36 @@ def process_save(request):
     thread.start()
 
     return JsonResponse({"code": 0, "msg": "处理已启动", "task_id": task_id})
+
+
+
+
+
+async def stream_text():
+    """逐行生成任务汇报信息"""
+    prefix = """请从以下任务汇报中提取信息并输出JSON：
+
+字段说明：
+specialProjects 专案专项数量
+intelligenceService 情报服务数量
+interviewWudience 接情访谈数量
+battleParticipation 战令参与数量
+newContribution 新媒体供稿数量
+completionRate 完成率 %
+increase 增长率 %
+promotionProject 推进项数量
+difficultItems 困难项数量
+specialName 专案专项名称
+covertOperations 隐蔽行动名称
+intelligenceName 情报服务名称
+difficultWork 难点工作
+只输出JSON。"""
+
+    # 逐行输出，每行间隔200ms
+    for line in prefix.split("\n"):
+        yield line + "\n"
+        await asyncio.sleep(2)
+
 
 
 # =========================

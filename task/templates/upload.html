@@ -137,6 +137,31 @@ button:hover {
     border-radius: 5px;
     font-weight: bold;
 }
+
+.stream-text-box {
+    background: #f0f8ff;
+    border: 1px solid #b3d9ff;
+    padding: 15px;
+    margin-top: 15px;
+    border-radius: 5px;
+}
+
+.stream-text-box h4 {
+    margin-top: 0;
+    color: #0056b3;
+}
+
+.stream-text-content {
+    background: white;
+    padding: 10px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    max-height: 300px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.6;
+}
 </style>
 </head>
 
@@ -222,11 +247,16 @@ async function processSave() {
                     resultDiv.innerHTML = `<div class="progress-container">
                         <div class="current-status">${data.message}</div>
                         <div class="processed-files"></div>
+                        <div id="stream-text-container" style="display:none;"></div>
                     </div>`;
                     break;
 
                 case 'progress':
                     updateStatus(data.message);
+                    break;
+
+                case 'stream_text':
+                    showStreamText(data.content);
                     break;
 
                 case 'file_processed':
@@ -265,6 +295,29 @@ function updateStatus(message) {
     if (statusDiv) {
         statusDiv.textContent = message;
     }
+}
+
+// ================= 显示流式文本 =================
+function showStreamText(content) {
+    let container = document.getElementById('stream-text-container');
+    
+    // 第一次显示时，创建容器
+    if (container.style.display === 'none') {
+        container.style.display = 'block';
+        container.innerHTML = `
+            <div class="stream-text-box">
+                <h4>📋 任务汇报提取结果</h4>
+                <div class="stream-text-content"></div>
+            </div>
+        `;
+    }
+    
+    // 将内容添加到容器
+    const contentDiv = container.querySelector('.stream-text-content');
+    contentDiv.textContent += content;
+    
+    // 自动滚动到底部
+    contentDiv.scrollTop = contentDiv.scrollHeight;
 }
 
 // ================= 添加处理文件 =================
